@@ -139,6 +139,7 @@ class DecisionTree:
         plt.plot(nodes,acc)'''
         acc = accuracy_score(data[:,-1],yfinal)
         print(acc*100)
+        return acc*100
 
     #def predict(self,data,root):
 
@@ -265,3 +266,43 @@ class DecisionTree:
         acc_ts = accuracy_score(ytest,y_pred2)
         print("Training accuracy is ", acc_tr*100)
         print("Teat accuracy is ",acc_ts*100)
+    
+    def get_list_of_nodes(self):
+        nodes = []
+        queue = []
+        queue.insert(0,self.root)
+        while(len(queue) != 0):
+            top = queue[-1]
+            queue.pop()
+            nodes.append(top)
+            if top.children:
+                for child in top.children.values():
+                    queue.insert(0,child)
+        return nodes
+
+    def post_pruning(self,val_data):
+        nodes = self.get_list_of_nodes()
+        nodes.reverse()
+        while True:
+            best_node_to_prune = None
+            best_accuracy_gained = -1
+            acc_before = self.predict(val_data)
+            for node in nodes:
+                if node.children:
+                    acc_b = self.predict(val_data)
+                    my_children = node.children
+                    node.children = []
+                    acc_a = self.predict(val_data)
+                    node.children = my_children
+                    acc_gained = acc_a - acc_b
+                    if acc_gained > best_accuracy_gained:
+                        best_node_to_prune = node
+                        best_accuracy_gained = acc_gained
+            if best_node_to_prune.children:
+                best_node_to_prune.children = []
+            acc_after = self.predict(val_data)
+            if(acc_after - acc_before) < 1e-10:
+                break
+
+
+                    

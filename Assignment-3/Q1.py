@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import nodeclass as nc 
+import nodeclass as nc
 import treeclass as tc 
 from sklearn.preprocessing import OneHotEncoder
 
@@ -48,17 +48,19 @@ test_array = preprocess(test_data)
 val_array = preprocess(val_data)
 print(array)
 
-#root = nc.DecisionTreeNode()
-#tree = tc.DecisionTree(root)
-#tree.train(tree.root,array)
+root = nc.DecisionTreeNode()
+tree = tc.DecisionTree(root)
+tree.train(tree.root,array)
+tree.post_pruning(val_array)
+
 #tree.set_node_count()#tree.root)
 #tree.traverse(tree.root)
 #acc_history = []
-#tree.predict(array)#,acc_history)
+tree.predict(test_array)#,acc_history)
 #tree.plot_this(acc_history)
 #tree = tc.DecisionTree(None)
 #tree.play_with_library(array,test_array,val_array)
 
-ohe_train, ohe_test, ohe_val = one_hot_encoding(data,test_data,val_data)
-tree = tc.DecisionTree(None)
-tree.random_forest(array,test_array,val_array)
+# ohe_train, ohe_test, ohe_val = one_hot_encoding(data,test_data,val_data)
+# tree = tc.DecisionTree(None)
+# tree.random_forest(array,test_array,val_array)
