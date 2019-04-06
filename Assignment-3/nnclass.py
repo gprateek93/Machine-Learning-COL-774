@@ -1,6 +1,7 @@
 import numpy as np
-from helper import sigmoid,sigmoid_derivative
-from sklearn.metrics import accuracy_score
+from helper import sigmoid,relu,relu_derivative
+from sklearn.metrics import accuracy_score, confusion_matrix
+import random
 
 class network:
     def __init__(self,num_inputs = 0,layers = 0,batch_size = 0,num_outputs = 0, activation = 'sigmoid'):
@@ -17,105 +18,98 @@ class network:
         self.outputs = []
         self.deltas = []
 
-    def feed_forward_step(self,inp,layer_num):
-        res = self.weights[layer_num] @ inp.reshape(-1,1) + self.biases[layer_num]
-        return res
-
-    def get_output(self,inp):
+    def get_output(self,inp): #feed forward
         output = inp
         output = np.array(output)
         self.outputs = []
         self.outputs.append(output)
-        for i in range(0,self.num_layers-1):
-            output = self.feed_forward_step(output,i)
-            self.outputs.append(output.reshape(-1))
+        #print(output.shape)
+        if self.activation == 'sigmoid':
+            for i in range(len(self.weights)):
+                output = sigmoid(output @ self.weights[i].T + self.biases[i].T)
+                self.outputs.append(output)
+        elif self.activation == 'relu':
+            for i in range(len(self.weights)):
+                if i == len(self.weights)-1:
+                    output = sigmoid(output @ self.weights[i].T + self.biases[i].T)
+                else:
+                    output = relu(output @ self.weights[i].T + self.biases[i].T)
+                self.outputs.append(output) 
         return output
 
     def backprop(self,layer_num = None,target = None, layer = 'hidden'):
         if(layer_num < 1):
             return
-        if(layer == 'output'):
-            if self.activation == 'sigmoid':
-                delta = (target - self.outputs[layer_num]) * sigmoid_derivative(self.outputs[layer_num])
-                #print(delta.shape)
-                self.deltas.insert(0,delta)
+        if layer == 'output':
+            delta = np.multiply((target - self.outputs[layer_num]),(self.outputs[layer_num]*(1-self.outputs[layer_num])))
+            self.deltas.insert(0,delta)
         else:
             if self.activation == 'sigmoid':
-                delta = []
-                for i in range(self.layers[layer_num]):
-                    h = np.dot(self.weights[layer_num][:,i],self.deltas[0])
-                    delta.append(h)
-                delta = np.array(delta)
-                delta = sigmoid_derivative(self.outputs[layer_num]) * delta
-                #print(delta.shape)
+                delta = np.multiply((self.outputs[layer_num]*(1-self.outputs[layer_num])),self.deltas[0] @ self.weights[layer_num])
+                self.deltas.insert(0,delta)
+            elif self.activation == 'relu':
+                delta = np.multiply(relu_derivative(self.outputs[layer_num]),self.deltas[0] @ self.weights[layer_num])
                 self.deltas.insert(0,delta)
         self.backprop(layer_num = layer_num-1)
 
-    def encode_targets(self,target):
-        tar = np.zeros((self.num_outputs,))
-        tar[int(target)] = 1
+    def encode_targets(self,targets):
+        tar = np.zeros((targets.shape[0],self.num_outputs))
+        i = 0
+        for target in targets:
+            tar[i][int(target)] = 1
+            i+=1
         return tar
 
     def decode_output(self,output):
-        return np.argmax(output)
+        res = [np.argmax(row) for row in output]
+        return res
     
     def update_weights(self,eta = 1):
         dw = []
         for i in range(len(self.weights)):
-            columns = []
-            for j in range(self.weights[i].shape[1]):
-                column = eta * self.deltas[i] * self.outputs[i][j]
-                columns.append(column)
-            columns = np.array(columns).T
-            dw.append(columns)
-        '''dw = []
-        for i in range(self.num_layers):
-            delta_w = eta * self.deltas[i] * self.outputs[i]
-            dw.append(delta_w.reshape(-1,1))'''
+            delta_w = (eta/self.batch_size) * (self.deltas[i].T @ self.outputs[i])
+            dw.append(delta_w)
         return dw
 
     def update_biases(self,eta = 1):
         db = []
         for i in range(len(self.biases)):
-            b = self.deltas[i] * eta
-            b = np.array(b)
-            db.append(b)
+            delta_b = (eta/self.batch_size) * np.sum(self.deltas[i]).T
+            db.append(delta_b)
         return db
 
-    def train(self,train_data,eta = 1,epochs = 1):
+    def train(self,train_data,eta = 0.1,epochs = 1):
+
         for a in range(epochs):
-            for i in range(0,train_data.shape[0],self.batch_size):
-                weight_update = []
-                bias_update = []
-                #print(train_data.shape)
-                for j in range(i,i+self.batch_size):
-                    target = self.encode_targets(train_data[j,-1])
-                    self.get_output(train_data[j,:-1])
-                    #print("The output for the ",j," example is ", self.outputs)
-                    self.deltas = []
-                    self.backprop(layer_num=self.num_layers-1,target=target,layer='output')
-                    weight_update_new = self.update_weights(eta)
-                    bias_update_new = self.update_biases(eta)
-                    if len(weight_update) == 0:
-                        weight_update = weight_update_new
-                    else:
-                        weight_update = [weight_update[k] + weight_update_new[k] for k in range(len(self.weights))]
-                    if len(bias_update) == 0:
-                        bias_update = bias_update_new
-                    else:
-                        bias_update = [bias_update[k] + bias_update_new[k] for k in range(len(self.biases))]
-                self.weights = [self.weights[k] + (weight_update[k]/self.batch_size) for k in range(len(self.weights))]
-                self.biases = [self.biases[k] + (bias_update[k]/self.batch_size).reshape(-1,1) for k in range(len(self.biases))]
-            print("epoch number", a+1, "completed!!" )
-            y_pred,acc = self.predict(train_data)
-            print("Accuracy is",acc)
+            #print(a+1)
+            mini_batches = [train_data[k:k+self.batch_size] for k in range(0, train_data.shape[0], self.batch_size)]
+            for mini_batch in mini_batches:
+                target = self.encode_targets(mini_batch[:,-1])
+                self.get_output(mini_batch[:,:-1])
+                self.deltas = []
+                self.backprop(layer_num=self.num_layers-1,target=target, layer='output')
+                weight_update = self.update_weights(eta)
+                bias_update = self.update_biases(eta)
+                self.weights = [self.weights[k] + weight_update[k] for k in range(len(self.weights))]
+                self.biases = [self.biases[k] + bias_update[k] for k in range(len(self.biases))]
+            #print(train_data.shape)
+            #print("epoch number", a+1, "completed!!" )
+            #metrics = self.predict(train_data)
+            #print("Accuracy is",metrics[0])
 
     def predict(self,test_data):
         y_pred = []
-        for data in test_data:
-            out = self.get_output(data[:-1])
-            out = self.decode_output(out)
-            y_pred.append(out)
+        #print(np.bincount(np.asarray(test_data[:,-1],dtype=int)))
+        y_pred = self.get_output(test_data[:,:-1])
+        y_pred = self.decode_output(y_pred)
+        #print(np.bincount(np.asarray(y_pred,dtype=int)))
+        #print(y_pred)
         
         acc = accuracy_score(test_data[:,-1],y_pred)
-        return y_pred,acc*100
+        conf = confusion_matrix(test_data[:,-1],y_pred)
+        return acc*100,conf
+    
+    def loss(self,train_data):
+        y_pred = self.get_output(train_data[:,:-1])
+        l = 0.5 * np.mean((y_pred-self.encode_targets(train_data[:,-1]))**2)
+        return l
