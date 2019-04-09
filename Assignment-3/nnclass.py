@@ -35,6 +35,7 @@ class network:
                 else:
                     output = relu(output @ self.weights[i].T + self.biases[i].T)
                 self.outputs.append(output) 
+        
         return output
 
     def backprop(self,layer_num = None,target = None, layer = 'hidden'):
@@ -81,7 +82,7 @@ class network:
     def train(self,train_data,eta = 0.1,epochs = 1):
 
         for a in range(epochs):
-            #print(a+1)
+            print(a+1)
             mini_batches = [train_data[k:k+self.batch_size] for k in range(0, train_data.shape[0], self.batch_size)]
             for mini_batch in mini_batches:
                 target = self.encode_targets(mini_batch[:,-1])

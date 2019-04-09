@@ -9,8 +9,6 @@ def getData(filename):
     data = pd.read_csv(filename, sep=',', header=None)
     return data
 
-train_data = getData('./Data/poker-hand-training-true.data.txt').values
-test_data = getData('./Data/poker-hand-testing.data.txt').values
 
 def one_hot_encoding(train_data,test_data,train_filename = './default_train.csv',test_filename= './default_test.csv',mode = 'dont_save'):
     #print(train_data.shape,test_data.shape)
@@ -37,73 +35,19 @@ def read_config(config_filename):
     num_layers = int(data[3])
     layers = data[4].split(' ')
     layers = list(map(int,layers))
-    activation = data[5]
+    activation = data[5].rstrip('\n')
     learning_rate = data[6]
     return num_inputs,num_outputs,batch_size,num_layers,layers,activation,learning_rate
 
-'''ohe_train,ohe_test = one_hot_encoding(train_data,test_data)
-#print(np.bincount(np.asarray(ohe_train[:,-1],dtype=int)))
-#print(ohe_train[:,-1])
-#part e:
-
-#part c,d,e
-training_loss_prev = 1
-eta = 0.1
-count = 0
-flag = 0
-while(True):  
-    print('working on eta',eta) 
-    count+=1 
-    units = [5,10,15,20,25]
-    train_plot = {}
-    test_plot = {}
-    for unit in units:
-        print("working on unit",unit)
-        my_network = nn.network(num_inputs=85, layers= [unit,unit], batch_size= 100, num_outputs= 10,activation='relu')
-        #print(np.bincount(np.asarray(ohe_train[:,-1],dtype=int)))
-        my_network.train(ohe_train,eta,epochs= 200)
-        #print("Training completed successfully!!")
-        #print(np.bincount(np.asarray(ohe_train[:,-1],dtype=int)))
-        metric_train = my_network.predict(ohe_train)
-        metric_test = my_network.predict(ohe_test)
-        print("Train_accuracy",metric_train[0])
-        print("Test_accuracy",metric_test[0])
-        print(metric_train[1])
-        print(metric_test[1])
-        #print("Train accuracy", metric_train[0])
-        #print("Test accuracy",metric_test[0])
-        train_plot[unit] = metric_train[0]
-        test_plot[unit] = metric_test[0]
-
-    fig = plt.figure()
-    plt.xlabel('Number of perceptron units')
-    plt.ylabel('Accuracy in percentage')
-    plt.plot(train_plot.keys(),train_plot.values(),label = 'Training accuracy')
-    plt.plot(test_plot.keys(),test_plot.values(),label = 'Test accuracy')
-    plt.legend(loc = 'upper left')
-    plt.savefig(str(eta)+"relu_single_hidden.png")
-    plt.show()
-    training_loss_curr = my_network.loss(ohe_train)
-    print("Training loss:",training_loss_curr)
-
-    if(training_loss_prev - training_loss_curr) < 1e-4:
-        flag+=1
-    training_loss_prev = training_loss_curr
-    if flag >= 2:
-        eta/=5
-    if(count%2==0):
-        if(training_loss_prev - training_loss_curr) >= 1e-4:
-            flag = 0
-    if(eta<1e-10):
-        break'''
 def main(args):
     if len(args) == 4:
+        print("here")
         train_file = args[0]
         test_file = args[1]
         ohe_train_file = args[2]
         ohe_test_file = args[3]
-        train_data = getData(train_file)
-        test_data = getData(test_file)
+        train_data = getData(train_file).values
+        test_data = getData(test_file).values
         one_hot_encoding(train_data,test_data,train_filename=ohe_train_file,test_filename=ohe_test_file, mode='save')
     else:
         config_file = args[0]
